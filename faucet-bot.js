@@ -1,4 +1,5 @@
 const axios = require('axios');
+const chalk = require('chalk');
 const { address } = require('./address'); // Import address dari file address.js
 
 // URL faucet
@@ -15,22 +16,22 @@ async function claimFaucet() {
     const response = await axios.post(faucetUrl, claimData);
     if (response.status === 200) {
       if (response.data.success) {
-        console.log('Faucet claimed successfully:', response.data.message);
+        console.log(chalk.green('Faucet claimed successfully:'), response.data.message);
         return true;
-      } else if (response.data.message.includes('already claimed')) {
+      } else if (response.data.message && response.data.message.includes('already claimed')) {
         const nextClaimTime = new Date(response.data.next_available).toLocaleString();
-        console.log('Faucet already claimed. Next claim available at:', nextClaimTime);
+        console.log(chalk.yellow('Faucet already claimed. Next claim available at:'), nextClaimTime);
         return new Date(response.data.next_available);
       } else {
-        console.log('Failed to claim faucet:', response.data.message);
+        console.log(chalk.red('Failed to claim faucet:'), response.data.message);
         return false;
       }
     } else {
-      console.log('Failed to claim faucet:', response.status, response.statusText);
+      console.log(chalk.red('Failed to claim faucet:'), response.status, response.statusText);
       return false;
     }
   } catch (error) {
-    console.error('Error claiming faucet:', error.message);
+    console.error(chalk.red('Error claiming faucet:'), error.message);
     return false;
   }
 }
@@ -45,15 +46,18 @@ async function main() {
   while (true) {
     const result = await claimFaucet();
     if (result === true) {
+      console.log(chalk.blue('Waiting for 24 hours before next claim...'));
       // Jika klaim berhasil, tunggu 24 jam sebelum mencoba lagi
       await sleep(24 * 60 * 60 * 1000);
     } else if (result instanceof Date) {
       // Jika sudah diklaim, tunggu hingga waktu berikutnya tersedia
       const waitTime = result - new Date();
       if (waitTime > 0) {
+        console.log(chalk.blue(`Waiting for ${waitTime / (60 * 1000)} minutes before next attempt...`));
         await sleep(waitTime);
       }
     } else {
+      console.log(chalk.blue('Retrying in 1 minute...'));
       // Jika gagal, coba lagi setelah 1 menit
       await sleep(1 * 60 * 1000);
     }
